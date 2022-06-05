@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+
+  db:
+
+    container_name: "MoneyDatabase"
+    image: mongo:5.0
+    volumes:
+      - db:/var/lib/mongodb/data
+    networks:
+      - db
+    ports:
+      - "27017:27017"
+    env_file:
+      - .env
+
+  hyauctions:
+    container_name: "money_backend"
+    build:
+      context: .
+    depends_on:
+      - db
+    env_file:
+      - .env
+    networks:
+      - db
+
+volumes:
+  db:
+
+networks:
+  db:
