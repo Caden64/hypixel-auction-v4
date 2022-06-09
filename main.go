@@ -11,7 +11,14 @@ func main() {
 
 	start := time.Now()
 	if os.Getenv("UseDB") == "true" {
+		database.RemoveAll()
 		database.Test()
+
+		for {
+			time.Sleep(20 * time.Second)
+			database.UpdateData()
+		}
+		// database.Test()
 	}
 	fmt.Println(time.Since(start))
 	// auctions.AllPagesAuctions()

@@ -12,20 +12,18 @@ import (
 	"time"
 )
 
-const uri = "mongodb://root:exsample@localhost"
-
 func Test() {
 
 	// credential to log in
 
 	credential := options.Credential{
 		Username: "root",
-		Password: "example",
+		Password: "rootpassword",
 	}
 
 	// logged in
 
-	clientOpts := options.Client().ApplyURI(uri).SetAuth(credential)
+	clientOpts := options.Client().ApplyURI("mongodb://root:rootpassword@db").SetAuth(credential)
 	client, err := mongo.Connect(context.TODO(), clientOpts)
 
 	// sanity check
@@ -55,7 +53,6 @@ func Test() {
 	names, err := db.ListCollectionNames(context.TODO(), bson.D{})
 	var collExsits bool
 	for _, i := range names {
-		fmt.Println(i)
 		if i == time.Now().Format("January2006") {
 			collExsits = true
 			break
@@ -63,10 +60,10 @@ func Test() {
 	}
 
 	if !collExsits {
-		tso := options.TimeSeries().SetTimeField(time.Now().Format("03:04:05 PM 02 January 2006"))
+		tso := options.TimeSeries().SetTimeField(time.Now().Format("timestamp"))
 		opts := options.CreateCollection().SetTimeSeriesOptions(tso)
 
-		err = db.CreateCollection(context.TODO(), "June2022", opts)
+		err = db.CreateCollection(context.TODO(), time.Now().Format("January2006"), opts)
 		if err != nil {
 			panic(err)
 
@@ -74,28 +71,7 @@ func Test() {
 
 	}
 
-	coll := db.Collection("June2022")
-
-	_, err = coll.DeleteMany(context.TODO(), bson.D{})
-	if err != nil {
-		fmt.Println("error deleting all data")
-	}
-
-	x := auctions.AllPagesAuctions()
-
-	var docs []interface{}
-
-	for _, i := range x.Auctions {
-		docs = append(docs, bson.D{{"auction", i}, {"time", primitive.NewDateTimeFromTime(time.UnixMilli(x.LastUpdated))}})
-	}
-
-	fmt.Println(len(docs))
-
-	// docs = append(docs, primitive.NewDateTimeFromTime(time.UnixMilli(data.LastUpdated)))
-	_, err = coll.InsertMany(context.TODO(), docs)
-	if err != nil {
-		log.Fatalf("Error: %v from request", err)
-	}
+	coll := db.Collection(time.Now().Format("January2006"))
 
 	cursor, err := coll.Find(context.TODO(), bson.D{})
 	if err != nil {
@@ -109,4 +85,112 @@ func Test() {
 
 	fmt.Println(len(Finaldata))
 
+}
+
+func UpdateData() []interface{} {
+
+	credential := options.Credential{
+		Username: "root",
+		Password: "rootpassword",
+	}
+
+	// logged in
+
+	clientOpts := options.Client().ApplyURI("mongodb://root:rootpassword@db").SetAuth(credential)
+	client, err := mongo.Connect(context.TODO(), clientOpts)
+
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+
+	db := client.Database("times_updated")
+
+	coll := db.Collection(time.Now().Format("January2006"))
+
+	_, err = coll.DeleteMany(context.TODO(), bson.D{})
+	if err != nil {
+		fmt.Println("error deleting all data")
+	}
+
+	x := auctions.AllPagesAuctions()
+
+	cursor, err := coll.Find(context.TODO(), bson.D{})
+	if err != nil {
+		panic(err)
+	}
+
+	TestData, err := Convert(cursor)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+
+	// if len(TestData) != 0 && check(TestData)
+
+	var docs []interface{}
+
+	for _, i := range x.Auctions {
+		docs = append(docs, bson.D{{"auction", i}, {"timestamp", primitive.NewDateTimeFromTime(time.UnixMilli(x.LastUpdated))}})
+	}
+
+	fmt.Println(len(docs))
+
+	_, err = coll.InsertMany(context.TODO(), docs)
+	if err != nil {
+		log.Fatalf("Error: %v from request", err)
+	}
+
+	cursor, err := coll.Find(context.TODO(), bson.D{})
+	if err != nil {
+		panic(err)
+	}
+
+	FinalData, err := Convert(cursor)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+
+	fmt.Println(len(FinalData))
+
+	return docs
+
+}
+
+func check(first, second time.Time) bool {
+
+	if first != second {
+		return false
+	}
+
+	return true
+}
+
+func RemoveAll() {
+
+	credential := options.Credential{
+		Username: "root",
+		Password: "rootpassword",
+	}
+
+	// logged in
+
+	clientOpts := options.Client().ApplyURI("mongodb://root:rootpassword@db").SetAuth(credential)
+	client, err := mongo.Connect(context.TODO(), clientOpts)
+
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+
+	db := client.Database("times_updated")
+
+	coll := db.Collection(time.Now().Format("January2006"))
+
+	_, err = coll.DeleteMany(context.TODO(), bson.D{})
+	if err != nil {
+		fmt.Println("error deleting all data")
+	}
+
+	err = coll.Drop(context.TODO())
+	if err != nil {
+		log.Fatalf("ERROR: %v", err)
+	}
 }
