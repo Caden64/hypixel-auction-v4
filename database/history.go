@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"hypixel-auction-v4/HypixelRequests/auctions"
 	"log"
+	"os"
 	"time"
 )
 
@@ -16,14 +17,14 @@ func Test() {
 
 	// credential to log in
 
-	credential := options.Credential{
-		Username: "root",
-		Password: "rootpassword",
-	}
+	//credential := options.Credential{
+	//	Username: "root",
+	//	Password: "rootpassword",
+	//}
 
 	// logged in
 
-	clientOpts := options.Client().ApplyURI("mongodb://root:rootpassword@db").SetAuth(credential)
+	clientOpts := options.Client().ApplyURI(os.Getenv("MONGODB_CONNSTRING")) // .SetAuth(credential)
 	client, err := mongo.Connect(context.TODO(), clientOpts)
 
 	// sanity check
@@ -119,14 +120,18 @@ func UpdateData() []interface{} {
 		panic(err)
 	}
 
-	TestData, err := Convert(cursor)
-	if err != nil {
-		log.Fatalf("Error: %v", err)
-	}
+	//TestData, err := Convert(cursor)
+	//if err != nil {
+	//	log.Fatalf("Error: %v", err)
+	//}
 
-	// if len(TestData) != 0 && check(TestData)
+	_, err = Time(cursor)
 
 	var docs []interface{}
+
+	//if len(TestData) != 0 && check(TestData) {
+	//	return docs
+	//}
 
 	for _, i := range x.Auctions {
 		docs = append(docs, bson.D{{"auction", i}, {"timestamp", primitive.NewDateTimeFromTime(time.UnixMilli(x.LastUpdated))}})
@@ -139,7 +144,7 @@ func UpdateData() []interface{} {
 		log.Fatalf("Error: %v from request", err)
 	}
 
-	cursor, err := coll.Find(context.TODO(), bson.D{})
+	cursor, err = coll.Find(context.TODO(), bson.D{})
 	if err != nil {
 		panic(err)
 	}

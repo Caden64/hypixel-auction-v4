@@ -2,10 +2,12 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"hypixel-auction-v4/HypixelRequests/auctions"
 	"reflect"
+	"time"
 )
 
 func Convert(cursor *mongo.Cursor) ([]auctions.Auction, error) {
@@ -89,5 +91,26 @@ func Convert(cursor *mongo.Cursor) ([]auctions.Auction, error) {
 	}
 
 	return totalAuction, nil
+
+}
+
+func Time(cursor *mongo.Cursor) (time.Time, error) {
+
+	var test map[string]interface{}
+
+	for cursor.Next(context.TODO()) {
+
+		err := cursor.Decode(&test)
+
+		if err != nil {
+			return time.Time{}, err
+		}
+
+		for _, i := range test {
+			fmt.Println(i)
+		}
+	}
+
+	return time.Now(), nil
 
 }
