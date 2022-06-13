@@ -10,6 +10,7 @@ import (
 	"hypixel-auction-v4/HypixelRequests/auctions"
 	"log"
 	"os"
+	"reflect"
 	"time"
 )
 
@@ -23,7 +24,6 @@ func Test() {
 	//}
 
 	// logged in
-
 	clientOpts := options.Client().ApplyURI(os.Getenv("MONGODB_CONNSTRING")) // .SetAuth(credential)
 	client, err := mongo.Connect(context.TODO(), clientOpts)
 
@@ -35,16 +35,11 @@ func Test() {
 		log.Fatalf("Program failed: %v\n", err)
 	}
 
-	if err != nil {
-		fmt.Println("error")
-		panic(err)
-	}
-
 	// disconnect when done
 
 	defer func() {
 		if err = client.Disconnect(context.TODO()); err != nil {
-			fmt.Println("error")
+			fmt.Println("Error disconnecting")
 			panic(err)
 		}
 	}()
@@ -72,20 +67,6 @@ func Test() {
 
 	}
 
-	coll := db.Collection(time.Now().Format("January2006"))
-
-	cursor, err := coll.Find(context.TODO(), bson.D{})
-	if err != nil {
-		panic(err)
-	}
-
-	Finaldata, err := Convert(cursor)
-	if err != nil {
-		log.Fatalf("Error: %v", err)
-	}
-
-	fmt.Println(len(Finaldata))
-
 }
 
 func UpdateData() []interface{} {
@@ -108,40 +89,39 @@ func UpdateData() []interface{} {
 
 	coll := db.Collection(time.Now().Format("January2006"))
 
-	_, err = coll.DeleteMany(context.TODO(), bson.D{})
-	if err != nil {
-		fmt.Println("error deleting all data")
-	}
-
-	x := auctions.AllPagesAuctions()
-
 	cursor, err := coll.Find(context.TODO(), bson.D{})
 	if err != nil {
 		panic(err)
 	}
 
-	//TestData, err := Convert(cursor)
-	//if err != nil {
-	//	log.Fatalf("Error: %v", err)
-	//}
+	tdata, err := Time(cursor)
 
-	_, err = Time(cursor)
+	if err != nil {
+		panic(err)
+	}
 
 	var docs []interface{}
 
-	//if len(TestData) != 0 && check(TestData) {
-	//	return docs
-	//}
+	dbdata, err := Convert(cursor)
 
-	for _, i := range x.Auctions {
-		docs = append(docs, bson.D{{"auction", i}, {"timestamp", primitive.NewDateTimeFromTime(time.UnixMilli(x.LastUpdated))}})
-	}
+	if !reflect.DeepEqual(tdata, time.Time{}) || len(dbdata) == 0 {
+		x := auctions.AllPagesAuctions(tdata)
 
-	fmt.Println(len(docs))
+		if len(x.Auctions) == 0 {
+			return nil
+		}
 
-	_, err = coll.InsertMany(context.TODO(), docs)
-	if err != nil {
-		log.Fatalf("Error: %v from request", err)
+		for _, i := range x.Auctions {
+			docs = append(docs, bson.D{{"auction", i}, {"timestamp", primitive.NewDateTimeFromTime(time.UnixMilli(x.LastUpdated))}})
+		}
+
+		fmt.Printf("amount of data to be added %v\n", len(docs))
+
+		_, err = coll.InsertMany(context.TODO(), docs)
+		if err != nil {
+			log.Fatalf("Error inserting data: %v\n", err)
+		}
+
 	}
 
 	cursor, err = coll.Find(context.TODO(), bson.D{})
@@ -151,22 +131,13 @@ func UpdateData() []interface{} {
 
 	FinalData, err := Convert(cursor)
 	if err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Fatalf("Error unable to use convert function: %v", err)
 	}
 
-	fmt.Println(len(FinalData))
+	fmt.Printf("final data %v\n", len(FinalData))
 
 	return docs
 
-}
-
-func check(first, second time.Time) bool {
-
-	if first != second {
-		return false
-	}
-
-	return true
 }
 
 func RemoveAll() {

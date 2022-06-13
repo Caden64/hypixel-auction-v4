@@ -9,15 +9,19 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"reflect"
 	"strconv"
 	"sync"
+	"time"
 )
 
-const url = "https://api.hypixel.net/skyblock/auctions"
+const (
+	URL = "https://api.hypixel.net/skyblock/auctions"
+)
 
 // AuctionRequest to send request and then return unmarshalled data
 func AuctionRequest(page int, client *http.Client) (AuctionData, error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(http.MethodGet, URL, nil)
 	if err != nil {
 		fmt.Printf("error with new http request %v\n", err)
 	}
@@ -106,7 +110,7 @@ func AuctionRequest(page int, client *http.Client) (AuctionData, error) {
 	return data, nil
 }
 
-func AllPagesAuctions() *AllAuctionData {
+func AllPagesAuctions(lastUpdate time.Time) *AllAuctionData {
 	var wg sync.WaitGroup
 
 	client := HypixelRequests.NewClient()
@@ -114,33 +118,48 @@ func AllPagesAuctions() *AllAuctionData {
 	var auctions AllAuctionData
 	wg.Add(1)
 
-	err := auctions.AddData(&wg, 0, client)
+	err := auctions.AddData(&wg, 0, client, lastUpdate)
+	fmt.Println("page 0")
+	log.Println(auctions.Pages == 0)
+	if err.Error() == "no new data" {
+		log.Println("first catch")
 
-	if err != nil {
+		return &auctions
+	} else if err != nil {
+		log.Println("second catch")
+
 		log.Fatalf("Error: %v", err)
 	}
 
+	log.Println(auctions)
 	for i := 1; i < auctions.Pages; i++ {
 		wg.Add(1)
 
-		err = auctions.AddData(&wg, i, client)
-
+		err = auctions.AddData(&wg, i, client, lastUpdate)
+		err := auctions.AddData(&wg, 0, client, lastUpdate)
+		fmt.Println("page " + strconv.Itoa(i))
 		if err != nil {
 			log.Fatalf("Error: %v", err)
 		}
 	}
 	wg.Wait()
-
+	fmt.Println("end")
 	return &auctions
 
 }
 
-func (c *AllAuctionData) AddData(wg *sync.WaitGroup, page int, client *http.Client) error {
+func (c *AllAuctionData) AddData(wg *sync.WaitGroup, page int, client *http.Client, lastUpdate time.Time) error {
 
 	current, err := AuctionRequest(page, client)
 	defer wg.Done()
 	if err != nil {
 		return err
+	}
+
+	if !reflect.DeepEqual(time.Time{}, lastUpdate) {
+		if time.UnixMilli(current.LastUpdated) == lastUpdate {
+			return errors.New("no new data")
+		}
 	}
 
 	c.Mutex.Lock()

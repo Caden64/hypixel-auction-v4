@@ -21,5 +21,6 @@ func main() {
 		// database.Test()
 	}
 	fmt.Println(time.Since(start))
+	// fmt.Println(auctions.URL)
 	// auctions.AllPagesAuctions()
 }

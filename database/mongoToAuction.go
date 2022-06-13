@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"hypixel-auction-v4/HypixelRequests/auctions"
@@ -106,11 +105,14 @@ func Time(cursor *mongo.Cursor) (time.Time, error) {
 			return time.Time{}, err
 		}
 
-		for _, i := range test {
-			fmt.Println(i)
+	}
+
+	for j, i := range test {
+		if j == "timestamp" {
+			return i.(primitive.DateTime).Time(), nil
 		}
 	}
 
-	return time.Now(), nil
+	return time.Time{}, nil
 
 }
