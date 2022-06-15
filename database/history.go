@@ -62,7 +62,6 @@ func Test() {
 		err = db.CreateCollection(context.TODO(), time.Now().Format("January2006"), opts)
 		if err != nil {
 			panic(err)
-
 		}
 
 	}
@@ -108,6 +107,7 @@ func UpdateData() []interface{} {
 		x := auctions.AllPagesAuctions(tdata)
 
 		if len(x.Auctions) == 0 {
+			fmt.Println("No data to update")
 			return nil
 		}
 

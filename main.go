@@ -15,7 +15,7 @@ func main() {
 		database.Test()
 
 		for {
-			time.Sleep(20 * time.Second)
+			time.Sleep(10 * time.Second)
 			database.UpdateData()
 		}
 		// database.Test()

@@ -119,31 +119,36 @@ func AllPagesAuctions(lastUpdate time.Time) *AllAuctionData {
 	wg.Add(1)
 
 	err := auctions.AddData(&wg, 0, client, lastUpdate)
-	fmt.Println("page 0")
-	log.Println(auctions.Pages == 0)
-	if err.Error() == "no new data" {
-		log.Println("first catch")
+	//fmt.Println("page 0")
+	//log.Println(auctions.Pages == 0)
 
-		return &auctions
-	} else if err != nil {
+	if err != nil {
+
+		if err.Error() == "no new data" {
+			return &AllAuctionData{}
+		}
+
 		log.Println("second catch")
 
 		log.Fatalf("Error: %v", err)
 	}
 
-	log.Println(auctions)
+	// log.Println(auctions)
 	for i := 1; i < auctions.Pages; i++ {
 		wg.Add(1)
 
 		err = auctions.AddData(&wg, i, client, lastUpdate)
-		err := auctions.AddData(&wg, 0, client, lastUpdate)
-		fmt.Println("page " + strconv.Itoa(i))
+		//fmt.Println("page " + strconv.Itoa(i))
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			if err.Error() == "no new data" {
+				log.Println("Timestamp changed to be different than started")
+			} else {
+				log.Fatalf("Error: %v", err)
+			}
 		}
 	}
 	wg.Wait()
-	fmt.Println("end")
+	// fmt.Println("end")
 	return &auctions
 
 }
