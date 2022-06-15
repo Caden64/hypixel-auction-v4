@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"hypixel-auction-v4/HypixelRequests/auctions"
 	"time"
 )
 
@@ -74,6 +75,13 @@ func checkCurrentMonthYearCollExists(db *mongo.Database) (bool, error) {
 	return collExists, nil
 }
 
+func getCurrentMonthYearColl(db *mongo.Database) *mongo.Collection {
+
+	coll := db.Collection(time.Now().Format("January2006"))
+
+	return coll
+}
+
 func disconnect(client *mongo.Client, ctx context.Context, ctxCancel context.CancelFunc) error {
 
 	err := client.Disconnect(ctx)
@@ -81,7 +89,7 @@ func disconnect(client *mongo.Client, ctx context.Context, ctxCancel context.Can
 	return err
 }
 
-func addManyTimeSeries(dataName string, data []interface{}, timeData time.Time, coll *mongo.Collection, ctx context.Context) error {
+func addManyAuctionOneFieldTimeSeries(dataName string, data []auctions.Auction, timeData time.Time, coll *mongo.Collection, ctx context.Context) error {
 
 	var docs []interface{}
 
@@ -94,16 +102,14 @@ func addManyTimeSeries(dataName string, data []interface{}, timeData time.Time, 
 	return err
 }
 
-func addOneTimeSeries(dataName string, data interface{}, timeData time.Time, coll *mongo.Collection, ctx context.Context) error {
+func delAllTimeSeries(coll *mongo.Collection, ctx context.Context) error {
 
-	_, err := coll.InsertOne(ctx, bson.D{{dataName, data}, {"timestamp", primitive.NewDateTimeFromTime(timeData)}})
+	_, err := coll.DeleteMany(ctx, bson.D{})
 
 	return err
 }
 
-func delAllTimeSeries(coll *mongo.Collection) error {
-
-	_, err := coll.DeleteMany(context.TODO(), bson.D{})
-
+func dropTimeSeries(coll *mongo.Collection, ctx context.Context) error {
+	err := coll.Drop(ctx)
 	return err
 }
