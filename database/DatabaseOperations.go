@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+func newContext() (context.Context, context.CancelFunc) {
+	return context.WithCancel(context.Background())
+}
+
 func connect() (*mongo.Client, error) {
 	credential := options.Credential{
 		Username: "root",
@@ -25,17 +29,12 @@ func connect() (*mongo.Client, error) {
 	}
 
 	return client, nil
-
 }
 
 func connectionCheck(client *mongo.Client) error {
 	err := client.Ping(context.TODO(), nil)
-	if err != nil {
-		return err
-	}
 
-	return nil
-
+	return err
 }
 
 func databaseConnection(client *mongo.Client) (*mongo.Database, error) {
@@ -47,22 +46,17 @@ func databaseConnection(client *mongo.Client) (*mongo.Database, error) {
 	}
 
 	return client.Database("times_updated"), nil
-
 }
 
 func addCurrentMonthColl(db *mongo.Database) error {
 	tso := options.TimeSeries().SetTimeField(time.Now().Format("timestamp"))
 	opts := options.CreateCollection().SetTimeSeriesOptions(tso)
 	err := db.CreateCollection(context.TODO(), time.Now().Format("January2006"), opts)
-	if err != nil {
-		return err
-	}
 
-	return nil
-
+	return err
 }
 
-func checkCollExists(db *mongo.Database) (bool, error) {
+func checkCurrentMonthYearCollExists(db *mongo.Database) (bool, error) {
 	names, err := db.ListCollectionNames(context.TODO(), bson.D{})
 
 	if err != nil {
@@ -78,17 +72,13 @@ func checkCollExists(db *mongo.Database) (bool, error) {
 	}
 
 	return collExists, nil
-
 }
 
-func disconnect(client *mongo.Client) error {
+func disconnect(client *mongo.Client, ctx context.Context, ctxCancel context.CancelFunc) error {
 
-	if err := client.Disconnect(context.TODO()); err != nil {
-		return err
-	}
-
-	return nil
-
+	err := client.Disconnect(ctx)
+	ctxCancel()
+	return err
 }
 
 func addManyTimeSeries(dataName string, data []interface{}, timeData time.Time, coll *mongo.Collection, ctx context.Context) error {
@@ -111,14 +101,9 @@ func addOneTimeSeries(dataName string, data interface{}, timeData time.Time, col
 	return err
 }
 
-func delManyTimeSeries() {
+func delAllTimeSeries(coll *mongo.Collection) error {
 
-}
+	_, err := coll.DeleteMany(context.TODO(), bson.D{})
 
-func delAllTimeSeries() {
-
-}
-
-func delOneTimeSeries() {
-
+	return err
 }

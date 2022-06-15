@@ -9,61 +9,44 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"hypixel-auction-v4/HypixelRequests/auctions"
 	"log"
-	"os"
 	"reflect"
 	"time"
 )
 
 func Test() {
 
-	// credential to log in
+	client, err := connect()
 
-	//credential := options.Credential{
-	//	Username: "root",
-	//	Password: "rootpassword",
-	//}
-
-	// logged in
-	clientOpts := options.Client().ApplyURI(os.Getenv("MONGODB_CONNSTRING")) // .SetAuth(credential)
-	client, err := mongo.Connect(context.TODO(), clientOpts)
-
-	// sanity check
-
-	err = client.Ping(context.TODO(), nil)
 	if err != nil {
-		fmt.Println("unable to reach database")
-		log.Fatalf("Program failed: %v\n", err)
+		fmt.Printf("Error: %v\n", err)
+		return
 	}
 
+	ctx, ctxCancel := newContext()
 	// disconnect when done
 
 	defer func() {
-		if err = client.Disconnect(context.TODO()); err != nil {
-			fmt.Println("Error disconnecting")
-			panic(err)
+		err = disconnect(client, ctx, ctxCancel)
+		if err != nil {
+			return
 		}
 	}()
 
-	db := client.Database("times_updated")
+	db, err := databaseConnection(client)
 
-	names, err := db.ListCollectionNames(context.TODO(), bson.D{})
-	var collExsits bool
-	for _, i := range names {
-		if i == time.Now().Format("January2006") {
-			collExsits = true
-			break
-		}
+	collExists, err := checkCurrentMonthYearCollExists(db)
+
+	if err != nil {
+		fmt.Printf("Error:, %v", err)
+		return
 	}
 
-	if !collExsits {
-		tso := options.TimeSeries().SetTimeField(time.Now().Format("timestamp"))
-		opts := options.CreateCollection().SetTimeSeriesOptions(tso)
-
-		err = db.CreateCollection(context.TODO(), time.Now().Format("January2006"), opts)
+	if !collExists {
+		err = addCurrentMonthColl(db)
 		if err != nil {
-			panic(err)
+			fmt.Printf("Error:, %v", err)
+			return
 		}
-
 	}
 
 }
