@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/go-redis/redis/v9"
 	"hypixel-auction-v4/HypixelRequests"
+	"hypixel-auction-v4/RedisDatabase"
 	"io"
 	"io/ioutil"
 	"log"
@@ -20,7 +22,7 @@ const (
 )
 
 // AuctionRequest to send request and then return unmarshalled data
-func AuctionRequest(page int, client *http.Client) (AuctionData, error) {
+func AuctionRequest(page int, client *http.Client, rdb *redis.Client) (AuctionData, error) {
 	req, err := http.NewRequest(http.MethodGet, URL, nil)
 	if err != nil {
 		fmt.Printf("error with new http request %v\n", err)
@@ -104,8 +106,29 @@ func AuctionRequest(page int, client *http.Client) (AuctionData, error) {
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return AuctionData{}, err
-
 	}
+
+	ticker := time.NewTicker(1 * time.Second)
+	done := make(chan bool)
+	for _, i := range data.Auctions {
+		for _, k := range i.Coop {
+			k := k
+
+			select {
+			case <-done:
+				break
+			case _ = <-ticker.C:
+				name, err := RedisDatabse.GetUser(rdb, k)
+
+				if err != nil {
+					log.Fatalf("Error: %v", err)
+				}
+				i.CoopUser = append(i.CoopUser, name)
+
+			}
+		}
+	}
+	ticker.Stop()
 
 	return data, nil
 }
@@ -118,7 +141,9 @@ func AllPagesAuctions(lastUpdate time.Time) *AllAuctionData {
 	var auctions AllAuctionData
 	wg.Add(1)
 
-	err := auctions.AddData(&wg, 0, client, lastUpdate)
+	rdb := RedisDatabse.Connect()
+
+	err := auctions.AddData(&wg, 0, client, lastUpdate, rdb)
 	//fmt.Println("page 0")
 	//log.Println(auctions.Pages == 0)
 
@@ -137,8 +162,7 @@ func AllPagesAuctions(lastUpdate time.Time) *AllAuctionData {
 	for i := 1; i < auctions.Pages; i++ {
 		wg.Add(1)
 
-		err = auctions.AddData(&wg, i, client, lastUpdate)
-		//fmt.Println("page " + strconv.Itoa(i))
+		err = auctions.AddData(&wg, i, client, lastUpdate, rdb)
 		if err != nil {
 			if err.Error() == "no new data" {
 				log.Println("Timestamp changed to be different than started")
@@ -148,14 +172,20 @@ func AllPagesAuctions(lastUpdate time.Time) *AllAuctionData {
 		}
 	}
 	wg.Wait()
+
+	err = RedisDatabse.Disconnect(rdb)
+	if err != nil {
+		return nil
+	}
+
 	// fmt.Println("end")
 	return &auctions
 
 }
 
-func (c *AllAuctionData) AddData(wg *sync.WaitGroup, page int, client *http.Client, lastUpdate time.Time) error {
+func (c *AllAuctionData) AddData(wg *sync.WaitGroup, page int, client *http.Client, lastUpdate time.Time, rdb *redis.Client) error {
 
-	current, err := AuctionRequest(page, client)
+	current, err := AuctionRequest(page, client, rdb)
 	defer wg.Done()
 	if err != nil {
 		return err

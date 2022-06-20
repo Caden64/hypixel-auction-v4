@@ -79,6 +79,8 @@ func UpdateData() []interface{} {
 	}
 	coll := getCurrentMonthYearColl(db)
 
+	// db.
+
 	cursor, err := getAllMongoD(coll, ctx)
 	if err != nil {
 		panic(err)
@@ -124,6 +126,25 @@ func UpdateData() []interface{} {
 
 	fmt.Printf("final data %v\n", len(FinalData))
 
+	{
+		var test map[string]interface{}
+
+		for cursor.Next(ctx) {
+
+			err = cursor.Decode(&test)
+
+			if err != nil {
+				fmt.Printf("ERROR: %v", err)
+				log.Fatalf("%v", err)
+			}
+
+		}
+		fmt.Printf("len of coll: %v\n", len(test))
+
+	}
+
+	getCollStats(db, coll, ctx)
+
 	return docs
 
 }
@@ -155,10 +176,49 @@ func RemoveAll() {
 	}
 	coll := getCurrentMonthYearColl(db)
 
+	cursor, err := getAllMongoD(coll, ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	{
+		var test map[string]interface{}
+
+		for cursor.Next(ctx) {
+
+			err = cursor.Decode(&test)
+
+			if err != nil {
+				fmt.Printf("ERROR: %v", err)
+				return
+			}
+
+		}
+		fmt.Printf("len of coll: %v\n", len(test))
+
+	}
+
 	err = delAllTimeSeries(coll, ctx)
 	if err != nil {
 		fmt.Printf("Error:, %v", err)
 		return
+	}
+
+	{
+		var test map[string]interface{}
+
+		for cursor.Next(ctx) {
+
+			err = cursor.Decode(&test)
+
+			if err != nil {
+				fmt.Printf("ERROR: %v", err)
+				return
+			}
+
+		}
+		fmt.Printf("len of coll: %v\n", len(test))
+
 	}
 
 	err = dropTimeSeries(coll, ctx)

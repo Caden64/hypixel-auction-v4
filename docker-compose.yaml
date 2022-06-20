@@ -2,34 +2,50 @@ version: "3.8"
 
 services:
 
-  db:
+  mongo:
 
     container_name: "MoneyDatabase"
     image: mongo:5.0.9
     volumes:
-      - db:/var/lib/mongodb/data
+      - mongodb:/var/lib/mongodb/data
     networks:
-      - db
+      - MongoDB
     ports:
       - "27017:27017"
     env_file:
       - .env
     restart: on-failure
 
+
+  redis:
+    image: redis:7.0.2
+    command: redis-server --requirepass password
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdb:/var/lib/redis/data
+    networks:
+      - RedisDB
+
+
   hyauctions:
     container_name: "money_backend"
     build:
       context: .
     depends_on:
-      - db
+      - mongo
+      - redis
     env_file:
       - .env
     networks:
-      - db
+      - MongoDB
+      - RedisDB
     restart: on-failure
 
 volumes:
-  db:
+  mongodb:
+  redisdb:
 
 networks:
-  db:
+  MongoDB:
+  RedisDB:

@@ -18,6 +18,7 @@ type Auction struct {
 	Auctioneer       string   `json:"auctioneer" bson:"auctioneer"`
 	ProfileId        string   `json:"profile_id" bson:"profileId"`
 	Coop             []string `json:"coop" bson:"coop"`
+	CoopUser         []string `json:"coopUser" bson:"coopUser"`
 	Start            int64    `json:"start" bson:"start"`
 	End              int64    `json:"end" bson:"end"`
 	ItemName         string   `json:"item_name" bson:"itemName"`

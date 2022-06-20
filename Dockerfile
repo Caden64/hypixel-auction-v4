@@ -2,13 +2,14 @@ FROM golang:1.18.3
 
 WORKDIR ./app
 
-ADD database ./database
-ADD HypixelRequests ./HypixelRequests
+COPY MongoDatabase ./MongoDatabase
+COPY HypixelRequests ./HypixelRequests
 
-ADD go.mod ./
-ADD go.sum ./
-
-ADD main.go ./
+COPY go.mod ./
+COPY go.sum ./
+COPY RedisDatabase ./RedisDatabase
+COPY MojangRequests ./MojangRequests
+COPY main.go ./
 
 RUN go mod download
 
